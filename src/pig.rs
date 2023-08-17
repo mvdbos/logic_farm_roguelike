@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::{Collider, RigidBody};
 
 use crate::{Money, Player};
 
@@ -40,6 +41,9 @@ fn spawn_pig(
     let player_transform = player.single();
     let parent = parent.single();
 
+    let mut pig_transform = *player_transform;
+    pig_transform.translation.x += 32.0;
+
     if money.0 >= 10.0 {
         money.0 -= 10.0;
         info!("Spent $10 on a pig, remaining money: ${:?}", money.0);
@@ -50,13 +54,15 @@ fn spawn_pig(
             commands.spawn((
                 SpriteBundle {
                     texture,
-                    transform: *player_transform,
+                    transform: pig_transform,
                     ..default()
                 },
                 Pig {
-                    lifetime: Timer::from_seconds(2.0, TimerMode::Once),
+                    lifetime: Timer::from_seconds(30.0, TimerMode::Once),
                 },
                 Name::new("Pig"),
+                RigidBody::KinematicPositionBased,
+                Collider::cuboid(24.0 / 2.0, 16.0 / 2.0),
             ));
         });
     }

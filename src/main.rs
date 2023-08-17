@@ -1,9 +1,11 @@
 use std::f32::consts::FRAC_1_SQRT_2;
+
 use bevy::{prelude::*, render::camera::ScalingMode};
 use bevy::input::common_conditions::input_toggle_active;
 use bevy_inspector_egui::InspectorOptions;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_rapier2d::prelude::*;
 
 use pig::PigPlugin;
 use ui::GameUI;
@@ -43,11 +45,14 @@ fn main() {
         .add_plugins(
             WorldInspectorPlugin::default().run_if(input_toggle_active(true, KeyCode::Escape)),
         )
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+        .add_plugins(RapierDebugRenderPlugin::default())
         .insert_resource(Money(100.0))
         .register_type::<Money>()
         .register_type::<Player>()
         .add_plugins((PigPlugin, GameUI))
         .add_systems(Startup, setup)
+        .add_systems(PostStartup, setup_physics)
         .add_systems(Update, character_movement)
         .run();
 }
@@ -74,35 +79,46 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 }
 
+fn setup_physics(
+    mut commands: Commands,
+    mut players: Query<Entity, With<Player>>,
+) {
+    for entity in &mut players {
+        info!("Adding physics to player: {:?}", entity);
+        commands.entity(entity)
+            .insert(KinematicCharacterController::default())
+            .insert(RigidBody::KinematicPositionBased)
+            .insert(Collider::cuboid(16.0 / 2.0, 16.0 / 2.0));
+    }
+}
+
 fn character_movement(
-    mut characters: Query<(&mut Transform, &Player)>,
+    mut player: Query<(&Player, &mut KinematicCharacterController), With<RigidBody>>,
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
-    for (mut transform, player) in &mut characters {
-        let movement_amount = player.speed * time.delta_seconds();
+    let (player, mut controller) = player.get_single_mut().expect("1 Player");
+    let movement_amount = player.speed * time.delta_seconds();
 
-        let mut target_y_movement = if input.pressed(KeyCode::W) {
-            movement_amount
-        } else if input.pressed(KeyCode::S) {
-            -movement_amount
-        } else {
-            0f32
-        };
+    let mut target_y_movement = if input.pressed(KeyCode::W) {
+        movement_amount
+    } else if input.pressed(KeyCode::S) {
+        -movement_amount
+    } else {
+        0f32
+    };
 
-        let mut target_x_movement = if input.pressed(KeyCode::D) {
-            movement_amount
-        } else if input.pressed(KeyCode::A) {
-            -movement_amount
-        } else {
-            0f32
-        };
+    let mut target_x_movement = if input.pressed(KeyCode::D) {
+        movement_amount
+    } else if input.pressed(KeyCode::A) {
+        -movement_amount
+    } else {
+        0f32
+    };
 
-        normalize_diagonal_movement(&mut target_y_movement, &mut target_x_movement);
+    normalize_diagonal_movement(&mut target_y_movement, &mut target_x_movement);
 
-        transform.translation.x += target_x_movement;
-        transform.translation.y += target_y_movement;
-    }
+    controller.translation = Some(Vec2::new(target_x_movement, target_y_movement));
 }
 
 fn normalize_diagonal_movement(target_y_movement: &mut f32, target_x_movement: &mut f32) {

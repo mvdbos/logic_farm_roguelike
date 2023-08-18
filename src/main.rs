@@ -1,10 +1,11 @@
 use std::f32::consts::FRAC_1_SQRT_2;
 
 use bevy::{
-    input::common_conditions::input_toggle_active, prelude::*, render::camera::ScalingMode,
+    input::common_conditions::input_toggle_active, math::vec2, prelude::*,
+    render::camera::ScalingMode,
 };
 use bevy_inspector_egui::{
-    prelude::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions,
+    InspectorOptions, prelude::ReflectInspectorOptions, quick::WorldInspectorPlugin,
 };
 use bevy_rapier2d::prelude::*;
 
@@ -19,6 +20,10 @@ pub struct Player {
     #[inspector(min = 0.0)]
     pub speed: f32,
 }
+
+#[derive(Component, InspectorOptions, Default, Reflect)]
+#[reflect(Component, InspectorOptions)]
+pub struct Wall;
 
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource)]
@@ -54,7 +59,7 @@ fn main() {
         .add_plugins((PigPlugin, GameUI))
         .add_systems(Startup, setup)
         .add_systems(PostStartup, setup_physics)
-        .add_systems(Update, (player_movement, camera_follow))
+        .add_systems(Update, (player_movement, player_hit_wall, camera_follow))
         .run();
 }
 
@@ -86,9 +91,27 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 custom_size: Some(Vec2::splat(256.0)),
                 ..default()
             },
+            transform: Transform::from_xyz(0.0, 0.0, -999.0),
             ..default()
         },
         Name::new("Ground"),
+    ));
+
+    let wall_size = vec2(4.0, 200.0);
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::YELLOW,
+                custom_size: Some(wall_size),
+                ..default()
+            },
+            transform: Transform::from_xyz(-200.0, 0.0, 0.0),
+            ..default()
+        },
+        Name::new("Wall"),
+        Collider::cuboid(wall_size.x / 2.0, wall_size.y / 2.0),
+        RigidBody::Fixed,
+        Wall,
     ));
 }
 
@@ -99,8 +122,11 @@ fn setup_physics(mut commands: Commands, player: Query<Entity, With<Player>>) {
         .entity(player_entity)
         .insert(KinematicCharacterController::default())
         .insert(RigidBody::KinematicPositionBased)
-        // .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC |
-        // ActiveCollisionTypes::KINEMATIC_STATIC | ActiveCollisionTypes::STATIC_STATIC)
+        .insert(
+            ActiveCollisionTypes::default()
+                | ActiveCollisionTypes::KINEMATIC_KINEMATIC
+                | ActiveCollisionTypes::KINEMATIC_STATIC,
+        )
         .insert(Collider::cuboid(16.0 / 2.0, 16.0 / 2.0));
 }
 
@@ -140,6 +166,24 @@ fn player_movement(
     normalize_diagonal_movement(&mut target_y_movement, &mut target_x_movement);
 
     controller.translation = Some(Vec2::new(target_x_movement, target_y_movement));
+}
+
+fn player_hit_wall(
+    player: Query<Option<&KinematicCharacterControllerOutput>, With<Player>>,
+    walls: Query<Entity, With<Wall>>,
+) {
+    let output_option = player.get_single().expect("1 Player");
+    if let Some(output) = output_option {
+        for collision in output.collisions.iter() {
+            if walls
+                .iter()
+                .any(|wall_entity| wall_entity == collision.entity)
+            {
+                info!("Player hit wall: {:?}", collision.entity);
+                // TODO: play wall_collision sound
+            }
+        }
+    }
 }
 
 fn normalize_diagonal_movement(target_y_movement: &mut f32, target_x_movement: &mut f32) {

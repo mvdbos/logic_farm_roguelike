@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier2d::{
     control::KinematicCharacterControllerOutput,
-    prelude::{
-        ActiveCollisionTypes, Collider, KinematicCharacterController, RapierContext, RigidBody, Toi,
-    },
+    prelude::{Collider, KinematicCharacterController, RigidBody, Toi},
 };
 
 use crate::{Money, Player};
@@ -74,7 +72,6 @@ fn spawn_pig(
                     ..default()
                 },
                 RigidBody::KinematicPositionBased,
-                ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
                 Collider::cuboid(24.0 / 2.0, 16.0 / 2.0),
             ));
         });
@@ -103,73 +100,28 @@ fn bumped_by_player(
 }
 
 fn determine_evasion_translation(toi: &Toi, movement_amount: f32) -> Option<Vec2> {
-    // let evasion_translation = if toi.normal2.x == 0.0 {
-    //     Vec2::new(6.0 * movement_amount, 3.0 * movement_amount)
-    // } else {
-    //     Vec2::new(3.0 * movement_amount, 6.0 * movement_amount)
-    // };
-    // of course, this is a bit too easy, so let's make it a bit more random:
     let movement_factor = 12.0;
     let pig_contact = toi.normal1;
     if pig_contact.x < 0.0 {
-        return Some(Vec2::new(movement_factor * movement_amount, movement_factor * movement_amount));
+        return Some(Vec2::new(
+            movement_factor * movement_amount,
+            movement_factor * movement_amount,
+        ));
     } else if pig_contact.x > 0.0 {
-        return Some(Vec2::new(-movement_factor * movement_amount, -movement_factor * movement_amount));
+        return Some(Vec2::new(
+            -movement_factor * movement_amount,
+            -movement_factor * movement_amount,
+        ));
     } else if pig_contact.y < 0.0 {
-        return Some(Vec2::new(movement_factor * movement_amount, movement_factor * movement_amount));
+        return Some(Vec2::new(
+            movement_factor * movement_amount,
+            movement_factor * movement_amount,
+        ));
     } else if pig_contact.y > 0.0 {
-        return Some(Vec2::new(-movement_factor * movement_amount, -movement_factor * movement_amount));
-    }
-    return None;
-}
-
-// fn detect_player_collisions(
-//     // mut commands: Commands,
-//     mut pigs: Query<(Entity, &mut Pig, &mut KinematicCharacterController,
-// &KinematicCharacterControllerOutput)>,     player: Query<Entity,
-// With<Player>>,     rapier_context: Res<RapierContext>,
-// ) { let player = player.get_single().expect("1 Player"); for (pig_entity, mut
-//   pig, mut controller, output) in &mut pigs { // controller.translation =
-//   display_contact_info(player, pig_entity, &rapier_context); }
-// }
-
-fn display_contact_info(
-    player: Entity,
-    pig: Entity,
-    rapier_context: &Res<RapierContext>,
-) -> Option<Vec2> {
-    if let Some(contact_pair) = rapier_context.contact_pair(player, pig) {
-        // The contact pair exists meaning that the broad-phase identified a potential
-        // contact.
-        if contact_pair.has_any_active_contacts() {
-            // The contact pair has active contacts, meaning that it
-            // contains contacts for which contact forces were computed.
-            info!("The contact pair has active contacts.");
-
-            for manifold in contact_pair.manifolds() {
-                // println!("Local-space contact player: {}", manifold.local_n1());
-                // println!("Local-space contact pig: {}", manifold.local_n2());
-                // Read the geometric contacts.
-                for contact_point in manifold.points() {
-                    // Keep in mind that all the geometric contact data are expressed in the
-                    // local-space of the colliders.
-                    println!(
-                        "Found local contact point on player: {:?}",
-                        contact_point.local_p1()
-                    );
-                    println!(
-                        "Found local contact point on pig: {:?}",
-                        contact_point.local_p2()
-                    );
-                }
-                // let evasion_translation = if manifold.local_n1().x == 0.0 {
-                //     Vec2::new(4.0, 2.0)
-                // } else {
-                //     Vec2::new(2.0, 4.0)
-                // };
-                // return Some(evasion_translation);
-            }
-        }
+        return Some(Vec2::new(
+            -movement_factor * movement_amount,
+            -movement_factor * movement_amount,
+        ));
     }
     return None;
 }

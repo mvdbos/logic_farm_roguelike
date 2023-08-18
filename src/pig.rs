@@ -9,7 +9,7 @@ pub struct PigPlugin;
 impl Plugin for PigPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_pig_parent)
-            .add_systems(Update, (spawn_pig, pig_lifetime, detect_player_collisions))
+            .add_systems(Update, (spawn_pig, pig_lifetime, bumped_by_player))
             .register_type::<Pig>();
     }
 }
@@ -75,17 +75,36 @@ fn spawn_pig(
     }
 }
 
-fn detect_player_collisions(
-    // mut commands: Commands,
-    mut pigs: Query<(Entity, &mut Pig, &mut KinematicCharacterController, &KinematicCharacterControllerOutput)>,
-    player: Query<Entity, With<Player>>,
-    rapier_context: Res<RapierContext>,
+fn bumped_by_player(
+    mut commands: Commands,
+    mut player: Query<(&Player, Option<&KinematicCharacterControllerOutput>)>,
+    mut pigs: Query<(Entity, &mut KinematicCharacterController)>,
 ) {
-    let player = player.get_single().expect("1 Player");
-    for (pig_entity, mut pig, mut controller, output) in &mut pigs {
-        // controller.translation = display_contact_info(player, pig_entity, &rapier_context);
+    let (player,  output_option) = player.get_single().expect("1 Player");
+    if let Some(output) = output_option {
+        for collision in output.collisions.iter() {
+            // info!("Player collided with {:?}", collision.entity);
+            // select pig entity from pigs
+            if let Some((pig_entity, mut pig_controller)) = pigs.iter_mut().find(|(pig_entity, _)| *pig_entity == collision.entity) {
+                info!("Pig contact: {:?}", collision.toi);
+
+
+            }
+        }
     }
 }
+
+// fn detect_player_collisions(
+//     // mut commands: Commands,
+//     mut pigs: Query<(Entity, &mut Pig, &mut KinematicCharacterController, &KinematicCharacterControllerOutput)>,
+//     player: Query<Entity, With<Player>>,
+//     rapier_context: Res<RapierContext>,
+// ) {
+//     let player = player.get_single().expect("1 Player");
+//     for (pig_entity, mut pig, mut controller, output) in &mut pigs {
+//         // controller.translation = display_contact_info(player, pig_entity, &rapier_context);
+//     }
+// }
 
 fn display_contact_info(player: Entity, pig: Entity, rapier_context: &Res<RapierContext>) -> Option<Vec2> {
     if let Some(contact_pair) = rapier_context.contact_pair(player, pig) {
@@ -110,7 +129,6 @@ fn display_contact_info(player: Entity, pig: Entity, rapier_context: &Res<Rapier
                 //     Vec2::new(2.0, 4.0)
                 // };
                 // return Some(evasion_translation);
-
             }
         }
     }

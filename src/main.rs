@@ -1,10 +1,11 @@
 use std::f32::consts::FRAC_1_SQRT_2;
 
-use bevy::{prelude::*, render::camera::ScalingMode};
-use bevy::input::common_conditions::input_toggle_active;
-use bevy_inspector_egui::InspectorOptions;
-use bevy_inspector_egui::prelude::ReflectInspectorOptions;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy::{
+    input::common_conditions::input_toggle_active, prelude::*, render::camera::ScalingMode,
+};
+use bevy_inspector_egui::{
+    prelude::ReflectInspectorOptions, quick::WorldInspectorPlugin, InspectorOptions,
+};
 use bevy_rapier2d::prelude::*;
 
 use pig::PigPlugin;
@@ -60,7 +61,6 @@ fn main() {
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut camera = Camera2dBundle::default();
 
-
     camera.projection.scaling_mode = ScalingMode::AutoMin {
         min_width: 256.0,
         min_height: 144.0,
@@ -92,16 +92,15 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 }
 
-fn setup_physics(
-    mut commands: Commands,
-    player: Query<Entity, With<Player>>,
-) {
+fn setup_physics(mut commands: Commands, player: Query<Entity, With<Player>>) {
     let player_entity = player.get_single().expect("1 Player");
     info!("Adding physics to player: {:?}", player_entity);
-    commands.entity(player_entity)
+    commands
+        .entity(player_entity)
         .insert(KinematicCharacterController::default())
         .insert(RigidBody::KinematicPositionBased)
-        // .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC | ActiveCollisionTypes::KINEMATIC_STATIC | ActiveCollisionTypes::STATIC_STATIC)
+        // .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC |
+        // ActiveCollisionTypes::KINEMATIC_STATIC | ActiveCollisionTypes::STATIC_STATIC)
         .insert(Collider::cuboid(16.0 / 2.0, 16.0 / 2.0));
 }
 
@@ -140,7 +139,6 @@ fn player_movement(
 
     normalize_diagonal_movement(&mut target_y_movement, &mut target_x_movement);
 
-
     controller.translation = Some(Vec2::new(target_x_movement, target_y_movement));
 }
 
@@ -150,4 +148,3 @@ fn normalize_diagonal_movement(target_y_movement: &mut f32, target_x_movement: &
         *target_y_movement *= DIAGONAL_MOVEMENT_NORMALIZATION_FACTOR;
     }
 }
-

@@ -1,6 +1,10 @@
 use bevy::prelude::*;
-use bevy_rapier2d::control::KinematicCharacterControllerOutput;
-use bevy_rapier2d::prelude::{ActiveCollisionTypes, Collider, KinematicCharacterController, RapierContext, RigidBody};
+use bevy_rapier2d::{
+    control::KinematicCharacterControllerOutput,
+    prelude::{
+        ActiveCollisionTypes, Collider, KinematicCharacterController, RapierContext, RigidBody, Toi,
+    },
+};
 
 use crate::{Money, Player};
 
@@ -18,6 +22,7 @@ impl Plugin for PigPlugin {
 #[reflect(Component)]
 pub struct Pig {
     pub lifetime: Timer,
+    pub speed: f32,
 }
 
 #[derive(Component)]
@@ -60,6 +65,7 @@ fn spawn_pig(
                 },
                 Pig {
                     lifetime: Timer::from_seconds(30.0, TimerMode::Once),
+                    speed: 100.0,
                 },
                 Name::new("Pig"),
                 KinematicCharacterController {
@@ -76,39 +82,65 @@ fn spawn_pig(
 }
 
 fn bumped_by_player(
-    mut commands: Commands,
-    mut player: Query<(&Player, Option<&KinematicCharacterControllerOutput>)>,
-    mut pigs: Query<(Entity, &mut KinematicCharacterController)>,
+    player: Query<Option<&KinematicCharacterControllerOutput>, With<Player>>,
+    mut pigs: Query<(Entity, &Pig, &mut KinematicCharacterController)>,
+    time: Res<Time>,
 ) {
-    let (player,  output_option) = player.get_single().expect("1 Player");
+    let output_option = player.get_single().expect("1 Player");
     if let Some(output) = output_option {
         for collision in output.collisions.iter() {
-            // info!("Player collided with {:?}", collision.entity);
-            // select pig entity from pigs
-            if let Some((pig_entity, mut pig_controller)) = pigs.iter_mut().find(|(pig_entity, _)| *pig_entity == collision.entity) {
-                info!("Pig contact: {:?}", collision.toi);
-
-
+            if let Some((_, pig, mut pig_controller)) = pigs
+                .iter_mut()
+                .find(|(pig_entity, _, _)| *pig_entity == collision.entity)
+            {
+                debug!("Pig bumped by player: {:?}", collision.entity);
+                let movement_amount = pig.speed * time.delta_seconds();
+                pig_controller.translation =
+                    determine_evasion_translation(&collision.toi, movement_amount);
             }
         }
     }
 }
 
+fn determine_evasion_translation(toi: &Toi, movement_amount: f32) -> Option<Vec2> {
+    // let evasion_translation = if toi.normal2.x == 0.0 {
+    //     Vec2::new(6.0 * movement_amount, 3.0 * movement_amount)
+    // } else {
+    //     Vec2::new(3.0 * movement_amount, 6.0 * movement_amount)
+    // };
+    // of course, this is a bit too easy, so let's make it a bit more random:
+    let movement_factor = 12.0;
+    let pig_contact = toi.normal1;
+    if pig_contact.x < 0.0 {
+        return Some(Vec2::new(movement_factor * movement_amount, movement_factor * movement_amount));
+    } else if pig_contact.x > 0.0 {
+        return Some(Vec2::new(-movement_factor * movement_amount, -movement_factor * movement_amount));
+    } else if pig_contact.y < 0.0 {
+        return Some(Vec2::new(movement_factor * movement_amount, movement_factor * movement_amount));
+    } else if pig_contact.y > 0.0 {
+        return Some(Vec2::new(-movement_factor * movement_amount, -movement_factor * movement_amount));
+    }
+    return None;
+}
+
 // fn detect_player_collisions(
 //     // mut commands: Commands,
-//     mut pigs: Query<(Entity, &mut Pig, &mut KinematicCharacterController, &KinematicCharacterControllerOutput)>,
-//     player: Query<Entity, With<Player>>,
-//     rapier_context: Res<RapierContext>,
-// ) {
-//     let player = player.get_single().expect("1 Player");
-//     for (pig_entity, mut pig, mut controller, output) in &mut pigs {
-//         // controller.translation = display_contact_info(player, pig_entity, &rapier_context);
-//     }
+//     mut pigs: Query<(Entity, &mut Pig, &mut KinematicCharacterController,
+// &KinematicCharacterControllerOutput)>,     player: Query<Entity,
+// With<Player>>,     rapier_context: Res<RapierContext>,
+// ) { let player = player.get_single().expect("1 Player"); for (pig_entity, mut
+//   pig, mut controller, output) in &mut pigs { // controller.translation =
+//   display_contact_info(player, pig_entity, &rapier_context); }
 // }
 
-fn display_contact_info(player: Entity, pig: Entity, rapier_context: &Res<RapierContext>) -> Option<Vec2> {
+fn display_contact_info(
+    player: Entity,
+    pig: Entity,
+    rapier_context: &Res<RapierContext>,
+) -> Option<Vec2> {
     if let Some(contact_pair) = rapier_context.contact_pair(player, pig) {
-        // The contact pair exists meaning that the broad-phase identified a potential contact.
+        // The contact pair exists meaning that the broad-phase identified a potential
+        // contact.
         if contact_pair.has_any_active_contacts() {
             // The contact pair has active contacts, meaning that it
             // contains contacts for which contact forces were computed.
@@ -119,9 +151,16 @@ fn display_contact_info(player: Entity, pig: Entity, rapier_context: &Res<Rapier
                 // println!("Local-space contact pig: {}", manifold.local_n2());
                 // Read the geometric contacts.
                 for contact_point in manifold.points() {
-                    // Keep in mind that all the geometric contact data are expressed in the local-space of the colliders.
-                    println!("Found local contact point on player: {:?}", contact_point.local_p1());
-                    println!("Found local contact point on pig: {:?}", contact_point.local_p2());
+                    // Keep in mind that all the geometric contact data are expressed in the
+                    // local-space of the colliders.
+                    println!(
+                        "Found local contact point on player: {:?}",
+                        contact_point.local_p1()
+                    );
+                    println!(
+                        "Found local contact point on pig: {:?}",
+                        contact_point.local_p2()
+                    );
                 }
                 // let evasion_translation = if manifold.local_n1().x == 0.0 {
                 //     Vec2::new(4.0, 2.0)
@@ -134,7 +173,6 @@ fn display_contact_info(player: Entity, pig: Entity, rapier_context: &Res<Rapier
     }
     return None;
 }
-
 
 fn pig_lifetime(
     mut commands: Commands,

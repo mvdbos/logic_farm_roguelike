@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier2d::control::KinematicCharacterControllerOutput;
 use bevy_rapier2d::prelude::{ActiveCollisionTypes, Collider, KinematicCharacterController, RapierContext, RigidBody};
 
 use crate::{Money, Player};
@@ -67,7 +68,7 @@ fn spawn_pig(
                     ..default()
                 },
                 RigidBody::KinematicPositionBased,
-                ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC | ActiveCollisionTypes::KINEMATIC_STATIC | ActiveCollisionTypes::STATIC_STATIC,
+                ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC,
                 Collider::cuboid(24.0 / 2.0, 16.0 / 2.0),
             ));
         });
@@ -76,19 +77,17 @@ fn spawn_pig(
 
 fn detect_player_collisions(
     // mut commands: Commands,
-    mut pigs: Query<(Entity, &mut Pig, &mut KinematicCharacterController)>,
+    mut pigs: Query<(Entity, &mut Pig, &mut KinematicCharacterController, &KinematicCharacterControllerOutput)>,
     player: Query<Entity, With<Player>>,
     rapier_context: Res<RapierContext>,
 ) {
     let player = player.get_single().expect("1 Player");
-    for (pig_entity, mut pig, mut controller) in &mut pigs {
-        controller.translation = display_contact_info(player, pig_entity, &rapier_context);
+    for (pig_entity, mut pig, mut controller, output) in &mut pigs {
+        // controller.translation = display_contact_info(player, pig_entity, &rapier_context);
     }
 }
 
 fn display_contact_info(player: Entity, pig: Entity, rapier_context: &Res<RapierContext>) -> Option<Vec2> {
-    // info!("Contact info for: {:?} and {:?}", entity1, entity2);
-    /* Find the contact pair, if it exists, between two colliders. */
     if let Some(contact_pair) = rapier_context.contact_pair(player, pig) {
         // The contact pair exists meaning that the broad-phase identified a potential contact.
         if contact_pair.has_any_active_contacts() {
@@ -97,11 +96,12 @@ fn display_contact_info(player: Entity, pig: Entity, rapier_context: &Res<Rapier
             info!("The contact pair has active contacts.");
 
             for manifold in contact_pair.manifolds() {
-                println!("Local-space contact player: {}", manifold.local_n1());
-                println!("Local-space contact pig: {}", manifold.local_n2());
+                // println!("Local-space contact player: {}", manifold.local_n1());
+                // println!("Local-space contact pig: {}", manifold.local_n2());
                 // Read the geometric contacts.
                 for contact_point in manifold.points() {
                     // Keep in mind that all the geometric contact data are expressed in the local-space of the colliders.
+                    println!("Found local contact point on player: {:?}", contact_point.local_p1());
                     println!("Found local contact point on pig: {:?}", contact_point.local_p2());
                 }
                 // let evasion_translation = if manifold.local_n1().x == 0.0 {

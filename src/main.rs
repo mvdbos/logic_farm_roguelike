@@ -1,6 +1,7 @@
 use std::f32::consts::FRAC_1_SQRT_2;
 
 use bevy::{prelude::*, render::camera::ScalingMode};
+use bevy::ecs::system::lifetimeless::SCommands;
 use bevy::input::common_conditions::input_toggle_active;
 use bevy_inspector_egui::InspectorOptions;
 use bevy_inspector_egui::prelude::ReflectInspectorOptions;
@@ -53,7 +54,7 @@ fn main() {
         .add_plugins((PigPlugin, GameUI))
         .add_systems(Startup, setup)
         .add_systems(PostStartup, setup_physics)
-        .add_systems(Update, (player_movement, camera_follow, display_collision_events))
+        .add_systems(Update, (player_movement, camera_follow, display_collision_events, detect_collisions))
         .run();
 }
 
@@ -101,7 +102,7 @@ fn setup_physics(
     commands.entity(player_entity)
         .insert(KinematicCharacterController::default())
         .insert(RigidBody::KinematicPositionBased)
-        .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC | ActiveCollisionTypes::KINEMATIC_STATIC | ActiveCollisionTypes::STATIC_STATIC)
+        // .insert(ActiveCollisionTypes::default() | ActiveCollisionTypes::KINEMATIC_KINEMATIC | ActiveCollisionTypes::KINEMATIC_STATIC | ActiveCollisionTypes::STATIC_STATIC)
         .insert(Collider::cuboid(16.0 / 2.0, 16.0 / 2.0));
 }
 
@@ -113,6 +114,19 @@ fn player_push_action(
 
     if input.just_pressed(KeyCode::Return) {
         // controller.apply_impulse_to_dynamic_bodies
+    }
+}
+
+fn detect_collisions(
+    mut commands: Commands,
+    mut player: Query<(&Player, &mut KinematicCharacterController, Option<&KinematicCharacterControllerOutput>)>,
+) {
+    let (player, controller, output_option) = player.get_single().expect("1 Player");
+    if let Some(output) = output_option {
+        for collision in output.collisions.iter() {
+            info!("Player collided with {:?}", collision.entity);
+            commands.entity(collision.entity).
+        }
     }
 }
 

@@ -57,13 +57,40 @@ fn main() {
         .register_type::<Money>()
         .register_type::<Player>()
         .add_plugins((PigPlugin, GameUI))
+        .add_systems(PreStartup, setup_texture_atlas_system)
         .add_systems(Startup, setup)
         .add_systems(PostStartup, setup_physics)
         .add_systems(Update, (player_movement, player_hit_wall, camera_follow))
         .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+#[derive(Resource)]
+pub struct DungeonTextureAtlas {
+    pub handle: Handle<TextureAtlas>,
+}
+
+fn setup_texture_atlas_system(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+) {
+    let texture_handle = asset_server.load("spritesheets/kenney_tiny-dungeon/Tilemap/tilemap.png");
+    let texture_atlas = TextureAtlas::from_grid(
+        texture_handle,
+        Vec2::new(16.0, 16.0),
+        12,
+        11,
+        Some(vec2(1.0, 1.0)),
+        None,
+    );
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+
+    commands.insert_resource(DungeonTextureAtlas {
+        handle: texture_atlas_handle,
+    });
+}
+
+fn setup(mut commands: Commands, tile_map_atlas: Res<DungeonTextureAtlas>) {
     let mut camera = Camera2dBundle::default();
 
     camera.projection.scaling_mode = ScalingMode::AutoMin {
@@ -73,11 +100,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn(camera);
 
-    let texture = asset_server.load("character.png");
-
     commands.spawn((
-        SpriteBundle {
-            texture,
+        SpriteSheetBundle {
+            texture_atlas: tile_map_atlas.handle.clone(),
+            sprite: TextureAtlasSprite::new((9-1) * 12 + 2 - 1),
             ..default()
         },
         Player { speed: 100.0 },
@@ -105,7 +131,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 custom_size: Some(wall_size),
                 ..default()
             },
-            transform: Transform::from_xyz(-200.0, 0.0, 0.0),
+            transform: Transform::from_xyz(-100.0, 0.0, 0.0),
             ..default()
         },
         Name::new("Wall"),

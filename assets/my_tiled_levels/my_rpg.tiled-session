@@ -1,0 +1,58 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "level_0.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "fileStates": {
+        "Pixel Dungeon.tsx": {
+            "scaleInDock": 2,
+            "scaleInEditor": 5.5
+        },
+        "level_0..tmx": {
+            "scale": 1.7871875,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 240.04196537856274,
+                "y": 160.86728449029556
+            }
+        },
+        "level_0.tmx": {
+            "expandedObjectLayers": [
+                4
+            ],
+            "scale": 3.5192,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 212.12207319845416,
+                "y": 292.11184360081836
+            }
+        },
+        "level_0.tmx#Pixel Dungeon ": {
+            "scaleInDock": 2
+        }
+    },
+    "last.exportedFilePath": "/Users/eu88fh/Developer/personal/logic_farm_roguelike/assets/tmx_test_2",
+    "last.imagePath": "/Users/eu88fh/Developer/personal/logic_farm_roguelike/assets/my_tiled_levels",
+    "map.lastUsedExportFilter": "Tiled map files (*.tmx *.xml)",
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "openFiles": [
+        "level_0.tmx"
+    ],
+    "project": "my_rpg.tiled-project",
+    "recentFiles": [
+        "level_0.tmx",
+        "Pixel Dungeon.tsx",
+        "level_0..tmx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}

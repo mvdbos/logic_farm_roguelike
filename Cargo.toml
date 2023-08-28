@@ -11,6 +11,10 @@ opt-level = 3
 
 [dependencies]
 bevy = { version = "0.11", features = ["dynamic_linking", "bevy_asset"] }
-bevy_rapier2d = { version = "0.22", features = [ "debug-render-2d" ] }
+bevy_rapier2d = { version = "0.22", features = ["debug-render-2d"] }
 bevy-inspector-egui = "0.19"
 rand = "0.8.5"
+#bevy_ecs_ldtk = "0.8.0"
+bevy_ecs_tilemap = "0.11.0"
+anyhow = "1.0.72"
+tiled = { version = "0.11.0", default-features = false }

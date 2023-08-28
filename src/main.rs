@@ -1,16 +1,22 @@
 use std::f32::consts::FRAC_1_SQRT_2;
+use std::time::Duration;
 
 use bevy::{
     input::common_conditions::input_toggle_active, math::vec2, prelude::*,
     render::camera::ScalingMode,
 };
+use bevy::asset::ChangeWatcher;
+use bevy_ecs_tilemap::prelude::*;
 use bevy_inspector_egui::{
     InspectorOptions, prelude::ReflectInspectorOptions, quick::WorldInspectorPlugin,
 };
 use bevy_rapier2d::prelude::*;
 
+// use bevy_ecs_ldtk::{LdtkPlugin, LevelSelection};
 use pig::PigPlugin;
 use ui::GameUI;
+
+mod tiled;
 
 const DIAGONAL_MOVEMENT_NORMALIZATION_FACTOR: f32 = FRAC_1_SQRT_2;
 
@@ -37,6 +43,10 @@ fn main() {
         .add_plugins(
             DefaultPlugins
                 .set(ImagePlugin::default_nearest())
+                .set(AssetPlugin {
+                    watch_for_changes: ChangeWatcher::with_delay(Duration::from_millis(200)),
+                    ..default()
+                })
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Logic Farming Roguelike".into(),
@@ -53,9 +63,14 @@ fn main() {
         )
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugins(RapierDebugRenderPlugin::default())
+        // .add_plugins(LdtkPlugin)
+        .add_plugins(TilemapPlugin)
+        .add_plugins(tiled::TiledMapPlugin)
         .insert_resource(Money(100.0))
         .register_type::<Money>()
         .register_type::<Player>()
+        // .insert_resource(LevelSelection::Index(0))
+        // .register_ldtk_entity::<MyBundle>("MyEntityIdentifier")
         .add_plugins((PigPlugin, GameUI))
         .add_systems(PreStartup, setup_texture_atlas_system)
         .add_systems(Startup, setup)
@@ -63,6 +78,14 @@ fn main() {
         .add_systems(Update, (player_movement, player_hit_wall, camera_follow))
         .run();
 }
+
+// #[derive(Bundle, LdtkEntity)]
+// pub struct MyBundle {
+//     a: ComponentA,
+//     b: ComponentB,
+//     #[sprite_sheet_bundle]
+//     sprite_bundle: SpriteSheetBundle,
+// }
 
 #[derive(Resource)]
 pub struct DungeonTextureAtlas {
@@ -90,7 +113,13 @@ fn setup_texture_atlas_system(
     });
 }
 
-fn setup(mut commands: Commands, tile_map_atlas: Res<DungeonTextureAtlas>) {
+// const LDTK_FILE: &str = "ldtk/demo.ldtk";
+
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    tile_map_atlas: Res<DungeonTextureAtlas>
+) {
     let mut camera = Camera2dBundle::default();
 
     camera.projection.scaling_mode = ScalingMode::AutoMin {
@@ -100,28 +129,42 @@ fn setup(mut commands: Commands, tile_map_atlas: Res<DungeonTextureAtlas>) {
 
     commands.spawn(camera);
 
+
+    let map_handle: Handle<tiled::TiledMap> = asset_server.load("my_tiled_levels/level_0.tmx");
+
+    commands.spawn(tiled::TiledMapBundle {
+        tiled_map: map_handle,
+        ..Default::default()
+    });
+
+    // commands.spawn(LdtkWorldBundle {
+    //     ldtk_handle: asset_server.load(LDTK_FILE),
+    //     ..Default::default()
+    // });
+
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas: tile_map_atlas.handle.clone(),
             sprite: TextureAtlasSprite::new((9-1) * 12 + 2 - 1),
+            transform: Transform::from_xyz(0.0, 0.0, 1.0),
             ..default()
         },
         Player { speed: 100.0 },
         Name::new("Player"),
     ));
 
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::DARK_GREEN,
-                custom_size: Some(Vec2::splat(256.0)),
-                ..default()
-            },
-            transform: Transform::from_xyz(0.0, 0.0, -999.0),
-            ..default()
-        },
-        Name::new("Ground"),
-    ));
+    // commands.spawn((
+    //     SpriteBundle {
+    //         sprite: Sprite {
+    //             color: Color::DARK_GREEN,
+    //             custom_size: Some(Vec2::splat(256.0)),
+    //             ..default()
+    //         },
+    //         transform: Transform::from_xyz(0.0, 0.0, -999.0),
+    //         ..default()
+    //     },
+    //     Name::new("Ground"),
+    // ));
 
     let wall_size = vec2(4.0, 200.0);
     commands.spawn((
